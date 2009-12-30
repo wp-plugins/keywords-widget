@@ -1,11 +1,13 @@
 <?php
 /*
 Plugin Name: Keywords Widget
-Plugin URI: http://www.cthreepo.name
+Plugin URI: http://www.blogseye.com
 Description: Widget to display a list of recent search engine query keywords in a link to the wp search function.
 Author: Keith P. Graham
-Version: 1.13
-Author URI: http://www.cthreepo.com
+Version: 1.0
+Author URI: http://www.blogseye.com
+Tested up to: 2.9
+
 */
 function widget_kpg_collect_data_kww() {
 // this collects data from search engines
