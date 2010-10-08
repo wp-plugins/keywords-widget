@@ -4,16 +4,14 @@ Plugin Name: Keywords Widget
 Plugin URI: http://www.blogseye.com
 Description: Widget to display a list of recent search engine query keywords in a link to the wp search function.
 Author: Keith P. Graham
-Version: 1.0
+Version: 1.1
 Author URI: http://www.blogseye.com
 Tested up to: 2.9
 
 */
 function widget_kpg_collect_data_kww() {
-// this collects data from search engines
-	$ref=urldecode($_SERVER['HTTP_REFERER']);
-	if (!(strpos($ref,'google'))&&!(strpos($ref,'yahoo')>0)&&!(strpos($ref,'bing')>0 )) return; // no search engines
-	$ref=str_replace('&quote',' ',$ref); // can screw up length of search string
+	$ref='';
+	if (array_key_exists('HTTP_REFERER',$_SERVER )) $ref=urldecode($_SERVER['HTTP_REFERER']);
 	$q='';
 	if ((strpos($ref,'google')>0||strpos($ref,'bing')>0 )&& strpos($ref,'&q=')>0) {
 		// search engine using q=
@@ -31,9 +29,9 @@ function widget_kpg_collect_data_kww() {
 		if (strpos($q,'&')>0) {
 			$q=substr($q,0,strpos($q,'&'));
 		}
-	} else return; // no search string
+	}
 	$q=trim($q);
-	if ($q=='') return;
+	if (empty($q)) return;
 	// if there is a search from the search engines, then we need to add it to our list
 	// q has a legit search in it.
 	// get the results of a search based on the parsed entry
@@ -46,58 +44,61 @@ function widget_kpg_collect_data_kww() {
 	$q=str_replace('  ',' ',$q); 
 	
 	$q=trim($q);
+	if (empty($q)) return;
+	
 	// insert the search string into options
-	// we will keep track of 5 recent searches for now - eventually make it an option
-	if ($q!='') { // might have made q empty again
-		// let's explode the list
-		$qs=explode(' ',$q.' ');
-		// get rid of common words - don'd need to search for these:
-		$common="z able about act add after again air all also am an and animal answer any are as ask at back bad be been before being between big boy build but by call came can case cause change child city close come company could country cover cross day did differ different do does don't down draw each early earth end even every eye fact far farm father feel few find first follow food for form found four from get give go good government great group grow had hand hard has have he head help her here high him his home hot house how if important in into is it its just keep kind know land large last late learn leave left let life light like line little live long look low made make man many may me mean men might more most mother move mr mrs much must my name near need never new next night no north not now number of off office old on one only or other our out over own page part people person picture place plant play point port press problem public put read real right round run said same saw say school sea see seem self sentence set she should show side small so some sound spell stand start state still story study such sun take tell than that the their them then there these they thing think this thought three through time to too tree try turn two under up upon us use very want was water way we week well went were what when where which while who why will with woman word work world would write year you young your ";
-		for ($j=count($qs)-1;$j>=0;$j--) {
-			if ($qs[$j]==null||strlen(trim($qs[$j]))<2||strpos($common,' '.$qs[$j].' ')>0) {
-				unset($qs[$j]);
-			}
+// we will keep track of 5 recent searches for now - eventually make it an option
+	// let's explode the list
+	$qs=explode(' ',$q.' ');
+	// get rid of common words - don'd need to search for these:
+	$common="z able about act add after again air all also am an and animal answer any are as ask at back bad be been before being between big boy build but by call came can case cause change child city close come company could country cover cross day did differ different do does don't down draw each early earth end even every eye fact far farm father feel few find first follow food for form found four from get give go good government great group grow had hand hard has have he head help her here high him his home hot house how if important in into is it its just keep kind know land large last late learn leave left let life light like line little live long look low made make man many may me mean men might more most mother move mr mrs much must my name near need never new next night no north not now number of off office old on one only or other our out over own page part people person picture place plant play point port press problem public put read real right round run said same saw say school sea see seem self sentence set she should show side small so some sound spell stand start state still story study such sun take tell than that the their them then there these they thing think this thought three through time to too tree try turn two under up upon us use very want was water way we week well went were what when where which while who why will with woman word work world would write year you young your ";
+	for ($j=count($qs)-1;$j>=0;$j--) {
+		if (empty($qs[$j])||strlen(trim($qs[$j]))<2||strpos($common,' '.$qs[$j].' ')>0) {
+			unset($qs[$j]);
 		}
-		if (count($qs)==0) return;
-		// time to find update the historu
-		// now let's add these keywords to the list
-		$options = (array) get_option('widget_kpg_kww');
-		if ($options==null) $options=array();
-		$history=$options['history'];
-		if ($history==null) $history=array();
+	}
+	if (count($qs)==0) return;
+	// time to find update the historu
+	// now let's add these keywords to the list
+	$options = (array) get_option('widget_kpg_kww');
+	if (empty($options)) $options=array();
+	$history=array();
+	if (array_key_exists('history',$options)) $history=$options['history'];
+	
+	for ($j=0;$j<count($qs);$j++) {
+		if (array_key_exists($qs[$j],$history)) {
+			$history[$qs[$j]]++;
+		} else {
+			$history[$qs[$j]]=1;
+		}
+	}
+	// now sort the array by the values in the array in descending order
+	arsort($history);
+	$options['history']=$history;
+	update_option('widget_kpg_kww', $options);
 		
-		for ($j=0;$j<count($qs);$j++) {
-			if (($qs[$j]!=null)&&(strlen($qs[$j])>1)) {
-				if (array_key_exists($qs[$j],$history)) {
-					$history[$qs[$j]]++;
-				} else {
-					$history[$qs[$j]]=1;
-				}
-			}
-		}
-		// now sort the array by the values in the array in descending order
-		arsort($history);
-		$options['history']=$history;
-		update_option('widget_kpg_kww', $options);
-	}		
 	return; // done updating history
 }
 function widget_kpg_kww($args) {
 	extract( $args );
 	$options = (array) get_option('widget_kpg_kww');
-	if ($options==null) $options=array();
-	$title = $options['title'];
-	if ($title==null) $title='';
+	if (empty($options)) $options=array();
+	$history=array();
+	if (array_key_exists('history',$options)) $history=$options['history'];
+	$title='';
+	if (array_key_exists('title',$options)) $title = $options['title'];
 	$history=$options['history'];
-	if ($history==null) $history=array();
-	$kww_count=$options['kww_count'];
-	if ( $kww_count==null||($kww_count<0&&$kww_count>50)) $kww_count=30;
-	$kww_nofollow=$options['kww_nofollow'];
+	$kww_count=30;
+	if (array_key_exists('kww_count',$options)) $kww_count=$options['kww_count'];
+	if ($kww_count<=0&&$kww_count>50) $kww_count=30;
+	$kww_nofollow='Y';
+	if (array_key_exists('kww_nofollow',$options)) $kww_nofollow=$options['kww_nofollow'];
 	if ($kww_nofollow!='Y') $kww_nofollow='';
-	$kww_style=$options['kww_style'];
+	$kww_style='Y';
+	if (array_key_exists('kww_style',$options)) 	$kww_style=$options['kww_style'];
 	if ($kww_style!='Y') $kww_style='';
 	
-	echo "\n\n<!-- Keywords Widget -->\n\n";
+	echo "\n\n<!-- start Keywords Widget -->\n\n";
 	if (count($history)>0) {
 		// calculate the total in the widget so we can do an average
 		$lim=0;
@@ -147,7 +148,8 @@ function widget_kpg_kww($args) {
 
 
 function widget_kpg_kww_control() {
-	$options = get_option('widget_kpg_kww');
+	$options = (array) get_option('widget_kpg_kww');
+	if (empty($options)) $options=array();
 	if ( $_POST['kpg_kww_submit'] ) {
 		$options['title'] = strip_tags(stripslashes($_POST['kpg_kww_title']));
 		$options['kww_count'] = strip_tags(stripslashes($_POST['kpg_kww_count']));
@@ -155,10 +157,20 @@ function widget_kpg_kww_control() {
 		$options['kww_style'] = strip_tags(stripslashes($_POST['kpg_kww_style']));
 		update_option('widget_kpg_kww', $options);
 	}
-	$title=$options['title'];
-	$kww_count=$options['kww_count'];
-	$kww_nofollow=$options['kww_nofollow'];
-	$kww_style=$options['kww_style'];
+	$history=array();
+	if (array_key_exists('history',$options)) $history=$options['history'];
+	$title='';
+	if (array_key_exists('title',$options)) $title = $options['title'];
+	$history=$options['history'];
+	$kww_count=30;
+	if (array_key_exists('kww_count',$options)) $kww_count=$options['kww_count'];
+	if ($kww_count<=0&&$kww_count>50) $kww_count=30;
+	$kww_nofollow='Y';
+	if (array_key_exists('kww_nofollow',$options)) $kww_nofollow=$options['kww_nofollow'];
+	if ($kww_nofollow!='Y') $kww_nofollow='';
+	$kww_style='Y';
+	if (array_key_exists('kww_style',$options)) 	$kww_style=$options['kww_style'];
+	if ($kww_style!='Y') $kww_style='';
 
 ?>
 <div style="text-align:right">
@@ -275,7 +287,7 @@ function kww_deleteItem(kw) {
 
 }
 function widget_kpg_kww_admin_menu() {
-   add_options_page('Keywords Widget', 'Keywords Widget', 'manage_options', 'keywords-widget/keywords-widget.php','widget_kpg_kww_admin' );
+   add_options_page('Keywords Widget', 'Keywords Widget', 'manage_options','keywords_widget','widget_kpg_kww_admin' );
 }
 
 function widget_kpg_kww_init() {
